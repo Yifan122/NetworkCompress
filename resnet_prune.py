@@ -5,11 +5,7 @@ import torch.nn as nn
 from pytorch.data_loader import get_data_loader
 from config import config
 from pytorch.train_val import train, validate
-
-
-class FilterPrunner:
-    def __init__(self, model):
-        self.model = model
+from pytorch.TaylorExpansionPrunner import TaylerExpansionPrunner
 
 
 class PrunningFineTuner:
@@ -19,7 +15,7 @@ class PrunningFineTuner:
 
         self.model = model
         self.criterion = torch.nn.CrossEntropyLoss()
-        self.prunner = FilterPrunner(self.model)
+        self.prunner = TaylerExpansionPrunner(self.model)
         self.model.train()
 
     def train(self, baseline_model=None, attention_transfer=False, distillation_knowledge=False):
@@ -33,6 +29,18 @@ class PrunningFineTuner:
         validate(self.val_data_loader, self.model, self.criterion, print_fre=200, exit=config.val_exit,
                  devices_id=config.device_ids)
 
+    def get_candidates_to_prune(self):
+        self.prunner.TaylorExpansion()
+
+    def prune(self):
+        self.model.train()
+
+        # Make sure all the layers are trainable
+        for param in self.model.features.parameters():
+            param.requires_grad = True
+
+        # Get the filter ranking
+        prune_targets = self.get_candidates_to_prune()
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -49,7 +57,11 @@ def get_args():
 if __name__ == '__main__':
     args = get_args()
 
-    resnet = models.resnet18(pretrained=True)
+    resnet = models.resnet50(pretrained=True)
+
+    print(resnet)
+
+    pruner = TaylerExpansionPrunner(resnet)
 
     baseline_model = models.resnet50(pretrained=True)
 
