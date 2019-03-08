@@ -1,6 +1,7 @@
 import argparse
 import torch
-import torchvision.models as models
+from pytorch.calculateTaylor import calculateTaylor
+from models.resnet import *
 import torch.nn as nn
 from pytorch.data_loader import get_data_loader
 from config import config
@@ -57,19 +58,22 @@ def get_args():
 if __name__ == '__main__':
     args = get_args()
 
-    resnet = models.resnet50(pretrained=True)
+    resnet = resnet50(pretrained=True)
 
     print(resnet)
 
     pruner = TaylerExpansionPrunner(resnet)
 
-    baseline_model = models.resnet50(pretrained=True)
+    calculateTaylor(pruner)
 
-    for param in baseline_model.parameters():
-        param.requires_grad = False
 
-    fine_tuner = PrunningFineTuner(args.train_path, args.test_path, resnet)
-
-    fine_tuner.train(baseline_model=baseline_model, distillation_knowledge=True, attention_transfer=False)
-
-    fine_tuner.val()
+    baseline_model = resnet50(pretrained=True)
+    #
+    # for param in baseline_model.parameters():
+    #     param.requires_grad = False
+    #
+    # fine_tuner = PrunningFineTuner(args.train_path, args.test_path, resnet)
+    #
+    # fine_tuner.train(baseline_model=baseline_model, distillation_knowledge=True, attention_transfer=False)
+    #
+    # fine_tuner.val()
