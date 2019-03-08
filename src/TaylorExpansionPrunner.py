@@ -2,20 +2,19 @@ import torch
 import copy
 import numpy as np
 from models.resnet import BasicBlock, Bottleneck
-import torch.nn as nn
+from src.deleteFilter import deleterFilterPerBlock
 import torch.optim as optim
 from config import config
-from utils.averageMeter import AverageMeter
-from utils.accuracy_classifer import accuracy
-from src.data_loader import get_data_loader
+
 
 LAYER = ['layer1', 'layer2', 'layer3', 'layer4']
 
 
 class TaylerExpansionPrunner:
-    def __init__(self, model):
+    def __init__(self, model, blocktype):
         self.model = model
         self.reset()
+        self.blocktype = blocktype
 
     def reset(self):
         self.activations = {'layer1': [],
@@ -110,7 +109,12 @@ class TaylerExpansionPrunner:
         #                 print(self.values[layer_name][i][j])
 
 
-    def calculateTaylor(self, dataloader, criterion, epoch=1, print_freq=200, exit_point = 1000):
+    def deleteFilter(self):
+        for layer_name in ['layer1', 'layer2', 'layer3', 'layer4']:
+            for i in range(len(self.filter_delete[layer_name])):
+                deleterFilterPerBlock(self.model, layer_name, i, self.filter_delete[layer_name][i], self.blocktype)
+
+    def calculateTaylor(self, dataloader, criterion, epoch=1, print_freq=200, exit_point = 10):
 
         optimizer = optim.SGD(self.model.parameters(), config.lr,
                               momentum=config.momentum)

@@ -172,7 +172,7 @@ def resnet18(pretrained=False, **kwargs):
     model = ResNet(BasicBlock, [2, 2, 2, 2], **kwargs)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet18']))
-    return model
+    return model, 'BasicBlock'
 
 
 def resnet34(pretrained=False, **kwargs):
@@ -184,7 +184,7 @@ def resnet34(pretrained=False, **kwargs):
     model = ResNet(BasicBlock, [3, 4, 6, 3], **kwargs)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet34']))
-    return model
+    return model, 'BasicBlock'
 
 
 def resnet50(pretrained=False, **kwargs):
@@ -196,7 +196,7 @@ def resnet50(pretrained=False, **kwargs):
     model = ResNet(Bottleneck, [3, 4, 6, 3], **kwargs)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet50']))
-    return model
+    return model, 'Bottleneck'
 
 
 def resnet101(pretrained=False, **kwargs):
@@ -208,7 +208,7 @@ def resnet101(pretrained=False, **kwargs):
     model = ResNet(Bottleneck, [3, 4, 23, 3], **kwargs)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet101']))
-    return model
+    return model, 'Bottleneck'
 
 
 def resnet152(pretrained=False, **kwargs):
@@ -220,4 +220,4 @@ def resnet152(pretrained=False, **kwargs):
     model = ResNet(Bottleneck, [3, 8, 36, 3], **kwargs)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet152']))
-    return model
+    return model, 'Bottleneck'

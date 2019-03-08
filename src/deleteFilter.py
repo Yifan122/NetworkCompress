@@ -23,11 +23,22 @@ def create_conv2_mask(index, shape):
     np_mask[:, index, :, :] = zeros_filter
     return torch.tensor(np_mask, dtype=torch.float32, device=torch.device("cuda"))
 
+def deleteIndividualFilter(conv1, bn1, conv2, index):
+    conv1_mask = create_conv1_mask(index, conv1.weight.shape)
+    conv1.weight.data.mul_(conv1_mask)
 
-def deleterFilter(model, layer, block, filter, dev0=0):
+    bn1_mask = creat_bn1_mask(index, bn1.bias.shape)
+    bn1.bias.data.mul_(bn1_mask)
+    bn1.weight.data.mul_(bn1_mask)
+    bn1.running_mean.data.mul_(bn1_mask)
+    bn1.running_var.data.mul_(bn1_mask)
 
-    # layer from 1-4
-    # block 0 or 1
+    conv2_mask = create_conv2_mask(index, conv2.weight.shape)
+    conv2.weight.data.mul_(conv2_mask)
+
+def deleterFilterPerBlock(model, layer, block, filter, blocktype, dev0=0):
+
+    assert blocktype in ['BasicBlock', 'Bottleneck']
     layer = LAYER.index(layer)+1
 
     with torch.cuda.device(dev0):
@@ -38,17 +49,16 @@ def deleterFilter(model, layer, block, filter, dev0=0):
         else:
             block = nn.Sequential(*list(model.children()))[layer][block]
 
-        for index in filter:
-            conv1_mask = create_conv1_mask(index, block.conv1.weight.shape)
-            block.conv1.weight.data.mul_(conv1_mask)
-
-            bn1_mask = creat_bn1_mask(index, block.bn1.bias.shape)
-            block.bn1.bias.data.mul_(bn1_mask)
-            block.bn1.weight.data.mul_(bn1_mask)
-            block.bn1.running_mean.data.mul_(bn1_mask)
-            block.bn1.running_var.data.mul_(bn1_mask)
-
-            conv2_mask = create_conv2_mask(index, block.conv2.weight.shape)
-            block.conv2.weight.data.mul_(conv2_mask)
-
-    return model
+        if blocktype == 'BasicBlock':
+            conv1 = getattr(block, 'conv1')
+            bn1 = getattr(block, 'bn1')
+            conv2 = getattr(block, 'conv2')
+            for index in filter:
+                deleteIndividualFilter(conv1, bn1, conv2, index)
+        else:
+            for i in range(2):
+                conv1 = getattr(block, 'conv{}'.format(i+1))
+                bn1 = getattr(block, 'bn{}'.format(i+1))
+                conv2 = getattr(block, 'conv{}'.format(i+2))
+                for index in filter[i]:
+                    deleteIndividualFilter(conv1, bn1, conv2, index)
