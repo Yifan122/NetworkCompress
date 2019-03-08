@@ -1,12 +1,11 @@
 import argparse
 import torch
-from pytorch.calculateTaylor import calculateTaylor
 from models.resnet import *
 import torch.nn as nn
-from pytorch.data_loader import get_data_loader
+from src.data_loader import get_data_loader
 from config import config
-from pytorch.train_val import train, validate
-from pytorch.TaylorExpansionPrunner import TaylerExpansionPrunner
+from src.train_val import train, validate
+from src.TaylorExpansionPrunner import TaylerExpansionPrunner
 
 
 class PrunningFineTuner:
@@ -31,17 +30,19 @@ class PrunningFineTuner:
                  devices_id=config.device_ids)
 
     def get_candidates_to_prune(self):
-        self.prunner.TaylorExpansion()
+        pruner.calculateTaylor(self.train_data_loader, self.criterion)
+        for i in range(50):
+            pruner.get_min_taylor_filter()
 
     def prune(self):
         self.model.train()
 
         # Make sure all the layers are trainable
-        for param in self.model.features.parameters():
+        for param in self.model.parameters():
             param.requires_grad = True
 
         # Get the filter ranking
-        prune_targets = self.get_candidates_to_prune()
+        self.get_candidates_to_prune()
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -64,16 +65,17 @@ if __name__ == '__main__':
 
     pruner = TaylerExpansionPrunner(resnet)
 
-    calculateTaylor(pruner)
+    # calculateTaylor(pruner)
 
 
     baseline_model = resnet50(pretrained=True)
+
+    for param in baseline_model.parameters():
+        param.requires_grad = False
+
+    fine_tuner = PrunningFineTuner(args.train_path, args.test_path, resnet)
+    fine_tuner.prune()
     #
-    # for param in baseline_model.parameters():
-    #     param.requires_grad = False
-    #
-    # fine_tuner = PrunningFineTuner(args.train_path, args.test_path, resnet)
-    #
-    # fine_tuner.train(baseline_model=baseline_model, distillation_knowledge=True, attention_transfer=False)
+    fine_tuner.train(baseline_model=baseline_model, distillation_knowledge=True, attention_transfer=False)
     #
     # fine_tuner.val()
