@@ -114,7 +114,7 @@ class TaylerExpansionPrunner:
             for i in range(len(self.filter_delete[layer_name])):
                 deleterFilterPerBlock(self.model, layer_name, i, self.filter_delete[layer_name][i], self.blocktype)
 
-    def calculateTaylor(self, dataloader, criterion, epoch=1, print_freq=200, exit_point = 10):
+    def calculateTaylor(self, dataloader, criterion, epoch=1, print_freq=200, exit_point = config.channel_exit):
 
         optimizer = optim.SGD(self.model.parameters(), config.lr,
                               momentum=config.momentum)

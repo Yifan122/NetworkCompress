@@ -5,7 +5,7 @@ from utils.averageMeter import AverageMeter
 from config import config
 
 
-def train(train_loader, train_model, baseline_model, criterion, optimizer, epoch=1, exit=1000, print_freq=50,
+def train(train_loader, train_model, baseline_model, criterion, optimizer, epoch=1, exit=config.train_exit, print_freq=config.print_fre,
           device_ids=[0], attention_transfer=False, distillation_knowledge=False, attention_index=None):
     print("starting training")
 
@@ -121,7 +121,7 @@ def train(train_loader, train_model, baseline_model, criterion, optimizer, epoch
 
                 print(print_message)
             if i == exit:
-                return None
+                return prec1
 
 def validate(val_loader, model, criterion, print_fre=50, exit=-1, devices_id=[0], dev0=0):
     # switch to evaluate mode

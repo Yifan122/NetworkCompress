@@ -10,7 +10,7 @@ from utils.find_zero_param import analyse_network
 
 
 class PrunningFineTuner:
-    def __init__(self, train_path, test_path, model, block_type):
+    def __init__(self, train_path, test_path, model, block_type, baseline_model=None):
         self.train_data_loader = get_data_loader(train_path, config.val_batch_size, config.num_workers, type='train')
         self.val_data_loader = get_data_loader(test_path, config.val_batch_size, config.num_workers, type='val')
 
@@ -19,18 +19,20 @@ class PrunningFineTuner:
         self.criterion = torch.nn.CrossEntropyLoss()
         self.pruner = TaylerExpansionPrunner(self.model, block_type)
         self.model.train()
+        self.baseline_model = baseline_model
 
     def train(self, baseline_model=None, attention_transfer=False, distillation_knowledge=False):
         optimizer = torch.optim.SGD(self.model.parameters(), config.lr,
                                     momentum=config.momentum)
-        train(self.train_data_loader, self.model, baseline_model, self.criterion, optimizer,
+        acc1 = train(self.train_data_loader, self.model, baseline_model, self.criterion, optimizer,
               attention_transfer=attention_transfer,
               distillation_knowledge=distillation_knowledge)
+        return acc1
 
     def val(self):
-        validate(self.val_data_loader, self.model, self.criterion, print_fre=200, exit=config.val_exit,
+        acc1, acc5 = validate(self.val_data_loader, self.model, self.criterion, print_fre=200, exit=config.val_exit,
                  devices_id=config.device_ids)
-
+        return acc1, acc5
 
     def prune(self):
         self.model.train()
@@ -39,15 +41,23 @@ class PrunningFineTuner:
         for param in self.model.parameters():
             param.requires_grad = True
 
-        # Get the filter ranking
-        self.pruner.calculateTaylor(self.train_data_loader, self.criterion)
+        acc1, acc5 = self.val()
 
-        for i in range(10):
-            self.pruner.get_min_taylor_filter()
-            self.pruner.deleteFilter()
-            analyse_network(self.model)
-            print(self.pruner.filter_delete)
-            print('*'*33)
+        # Get the filter ranking
+        while(acc1 > 68):
+            self.pruner.calculateTaylor(self.train_data_loader, self.criterion)
+
+            for i in range(5):
+                self.pruner.get_min_taylor_filter()
+                self.pruner.deleteFilter()
+                analyse_network(self.model)
+                print(self.pruner.filter_delete)
+                print('*'*33)
+                acc1 = self.train(baseline_model=baseline_model, distillation_knowledge=False, attention_transfer=True)
+
+                acc1, acc5 = self.val()
+            # acc1 = self.train(baseline_model=baseline_model, distillation_knowledge=True, attention_transfer=False)
+
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -68,7 +78,7 @@ if __name__ == '__main__':
 
     print(resnet)
 
-    baseline_model, _ = resnet50(pretrained=True)
+    baseline_model, _ = resnet152(pretrained=True)
 
     # from src.deleteFilter import deleterFilterPerBlock
     # from utils.find_zero_param import analyse_network
@@ -83,7 +93,7 @@ if __name__ == '__main__':
     for param in baseline_model.parameters():
         param.requires_grad = False
 
-    fine_tuner = PrunningFineTuner(args.train_path, args.test_path, resnet, block_type)
+    fine_tuner = PrunningFineTuner(args.train_path, args.test_path, resnet, block_type, baseline_model=baseline_model)
     fine_tuner.prune()
     #
     fine_tuner.train(baseline_model=baseline_model, distillation_knowledge=True, attention_transfer=False)
