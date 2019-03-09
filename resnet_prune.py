@@ -47,7 +47,7 @@ class PrunningFineTuner:
         while(acc1 > 68):
             self.pruner.calculateTaylor(self.train_data_loader, self.criterion)
 
-            for i in range(5):
+            for i in range(2):
                 self.pruner.get_min_taylor_filter()
                 self.pruner.deleteFilter()
                 analyse_network(self.model)

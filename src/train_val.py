@@ -4,10 +4,17 @@ from utils.func import at_loss, distillation
 from utils.averageMeter import AverageMeter
 from config import config
 
+def remove_hook(hook_list):
+    for hook in hook_list:
+        hook.remove()
 
 def train(train_loader, train_model, baseline_model, criterion, optimizer, epoch=1, exit=config.train_exit, print_freq=config.print_fre,
           device_ids=[0], attention_transfer=False, distillation_knowledge=False, attention_index=None):
     print("starting training")
+
+    # create a list to store all the hook
+    train_hook = []
+    baseline_hook = []
 
     if not isinstance(train_model, torch.nn.DataParallel):
         train_model = torch.nn.DataParallel(train_model, device_ids=device_ids)
@@ -48,8 +55,8 @@ def train(train_loader, train_model, baseline_model, criterion, optimizer, epoch
                 model_layer = getattr(train_model.module, 'layer{}'.format(attention_index[0]))
                 baseline_model_layer = getattr(baseline_model.module, 'layer{}'.format(attention_index[0]))
 
-                model_layer[attention_index[1]].register_forward_hook(get_activation(model_feature, 0))
-                baseline_model_layer[attention_index[1]].register_forward_hook(get_activation(baseline_model_feature, 0))
+                train_hook.append(model_layer[attention_index[1]].register_forward_hook(get_activation(model_feature, 0)))
+                baseline_hook.append(baseline_model_layer[attention_index[1]].register_forward_hook(get_activation(baseline_model_feature, 0)))
 
             else:
 
@@ -57,9 +64,9 @@ def train(train_loader, train_model, baseline_model, criterion, optimizer, epoch
                     model_layer = getattr(train_model.module, 'layer{}'.format(i))
                     baseline_model_layer = getattr(baseline_model.module, 'layer{}'.format(i))
 
-                    model_layer[len(model_layer) - 1].register_forward_hook(get_activation(model_feature, i-1))
-                    baseline_model_layer[len(baseline_model_layer) - 1].register_forward_hook(
-                        get_activation(baseline_model_feature, i-1))
+                    train_hook.append(model_layer[len(model_layer) - 1].register_forward_hook(get_activation(model_feature, i-1)))
+                    baseline_hook.append(baseline_model_layer[len(baseline_model_layer) - 1].register_forward_hook(
+                        get_activation(baseline_model_feature, i-1)))
 
         for i, (input, target) in enumerate(train_loader):
 
@@ -121,7 +128,13 @@ def train(train_loader, train_model, baseline_model, criterion, optimizer, epoch
 
                 print(print_message)
             if i == exit:
+                remove_hook(train_hook)
+                remove_hook(baseline_hook)
                 return prec1
+
+    remove_hook(train_hook)
+    remove_hook(baseline_hook)
+    return prec1
 
 def validate(val_loader, model, criterion, print_fre=50, exit=-1, devices_id=[0], dev0=0):
     # switch to evaluate mode

@@ -10,9 +10,9 @@ class DefaultConfigs(object):
     val_batch_size = 16
     channel_batch_size = 16
 
-    train_exit = 30  # 3000  # Total number of images for training is train_batch_size*train_exit
-    val_exit = 40  # 400 # Total number of images for validation is val_batch_size*val_exit
-    channel_exit = 30
+    train_exit = 3000  # 3000  # Total number of images for training is train_batch_size*train_exit
+    val_exit = 400  # 400 # Total number of images for validation is val_batch_size*val_exit
+    channel_exit = 2000
 
     print_fre = 200
 
