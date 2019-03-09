@@ -80,16 +80,6 @@ if __name__ == '__main__':
 
     baseline_model, _ = resnet152(pretrained=True)
 
-    # from src.deleteFilter import deleterFilterPerBlock
-    # from utils.find_zero_param import analyse_network
-    # deleteList = [(0, 1, 2, 3), (4, 5, 6)]
-    #
-    # # for index in deleteList:
-    # deleterFilterPerBlock(resnet, 'layer1', 0, deleteList, block_type)
-    #
-    # analyse_network(resnet)
-    # print('yes')
-
     for param in baseline_model.parameters():
         param.requires_grad = False
 
